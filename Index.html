@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simple To-Do App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #0077cc;
+      margin-bottom: 30px;
+    }
+
+    .input-section {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #0077cc;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    input[type="text"]:focus {
+      border-color: #005999;
+    }
+
+    button {
+      padding: 12px 20px;
+      background: #0077cc;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background: #005999;
+    }
+
+    section {
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      border-bottom: 2px solid #0077cc;
+      padding-bottom: 6px;
+      color: #005999;
+    }
+
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    li {
+      background: white;
+      padding: 14px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .task-text {
+      flex: 1;
+      margin-right: 15px;
+      word-break: break-word;
+    }
+
+    .timestamps {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .buttons-group button {
+      margin-left: 6px;
+      padding: 6px 10px;
+      font-size: 0.9em;
+      border-radius: 5px;
+    }
+
+    .edit-btn {
+      background: #ffa500;
+      border: none;
+      color: white;
+    }
+
+    .complete-btn {
+      background: #28a745;
+      border: none;
+      color: white;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+      border: none;
+      color: white;
+    }
+
+    input.edit-input {
+      font-size: 1em;
+      padding: 6px 10px;
+      border-radius: 5px;
+      border: 1.5px solid #0077cc;
+      flex: 1;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>My To-Do List</h1>
+
+  <div class="input-section">
+    <input type="text" id="taskInput" placeholder="Add a new task..." />
+    <button onclick="addTask()">Add</button>
+  </div>
+
+  <section id="pendingSection">
+    <h2>Pending Tasks</h2>
+    <ul id="pendingTasks"></ul>
+  </section>
+
+  <section id="completedSection">
+    <h2>Completed Tasks</h2>
+    <ul id="completedTasks"></ul>
+  </section>
+
+  <script>
+    const taskInput = document.getElementById('taskInput');
+    const pendingTasksUL = document.getElementById('pendingTasks');
+    const completedTasksUL = document.getElementById('completedTasks');
+
+    // Store tasks as objects { id, text, createdAt, completedAt (optional) }
+    let pendingTasks = [];
+    let completedTasks = [];
+
+    function formatDate(date) {
+      return new Date(date).toLocaleString();
+    }
+
+    function renderTasks() {
+      // Clear lists
+      pendingTasksUL.innerHTML = '';
+      completedTasksUL.innerHTML = '';
+
+      // Render pending tasks
+      pendingTasks.forEach(task => {
+        const li = createTaskElement(task, false);
+        pendingTasksUL.appendChild(li);
+      });
+
+      // Render completed tasks
+      completedTasks.forEach(task => {
+        const li = createTaskElement(task, true);
+        completedTasksUL.appendChild(li);
+      });
+    }
+
+    function createTaskElement(task, completed) {
+      const li = document.createElement('li');
+
+      const taskDiv = document.createElement('div');
+      taskDiv.style.flex = '1';
+
+      // Editable or text span
+      const span = document.createElement('span');
+      span.className = 'task-text';
+      span.innerText = task.text;
+
+      taskDiv.appendChild(span);
+
+      // Add timestamps info
+      const timestamps = document.createElement('div');
+      timestamps.className = 'timestamps';
+
+      let timeText = `Added: ${formatDate(task.createdAt)}`;
+      if (completed && task.completedAt) {
+        timeText += ` | Completed: ${formatDate(task.completedAt)}`;
+      }
+      timestamps.innerText = timeText;
+
+      taskDiv.appendChild(timestamps);
+
+      li.appendChild(taskDiv);
+
+      // Buttons group
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'buttons-group';
+
+      // Edit button
+      const editBtn = document.createElement('button');
+      editBtn.className = 'edit-btn';
+      editBtn.innerText = 'Edit';
+      editBtn.onclick = () => editTask(task.id, completed, li, span, editBtn);
+      btnGroup.appendChild(editBtn);
+
+      // If pending, add Complete button
+      if (!completed) {
+        const completeBtn = document.createElement('button');
+        completeBtn.className = 'complete-btn';
+        completeBtn.innerText = 'Complete';
+        completeBtn.onclick = () => completeTask(task.id);
+        btnGroup.appendChild(completeBtn);
+      }
+
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.innerText = 'Delete';
+      deleteBtn.onclick = () => deleteTask(task.id, completed);
+      btnGroup.appendChild(deleteBtn);
+
+      li.appendChild(btnGroup);
+
+      return li;
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+      if (!text) {
+        alert('Please enter a task.');
+        return;
+      }
+      const newTask = {
+        id: Date.now(),
+        text,
+        createdAt: new Date().toISOString(),
+      };
+      pendingTasks.push(newTask);
+      taskInput.value = '';
+      renderTasks();
+    }
+
+    function deleteTask(id, completed) {
+      if (completed) {
+        completedTasks = completedTasks.filter(t => t.id !== id);
+      } else {
+        pendingTasks = pendingTasks.filter(t => t.id !== id);
+      }
+      renderTasks();
+    }
+
+    function completeTask(id) {
+      const index = pendingTasks.findIndex(t => t.id === id);
+      if (index !== -1) {
+        const task = pendingTasks.splice(index, 1)[0];
+        task.completedAt = new Date().toISOString();
+        completedTasks.push(task);
+        renderTasks();
+      }
+    }
+
+    function editTask(id, completed, li, span, editBtn) {
+      // Disable the edit button while editing
+      editBtn.disabled = true;
+
+      // Replace span with input field
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = span.innerText;
+      input.className = 'edit-input';
+
+      // Replace span with input
+      span.replaceWith(input);
+      input.focus();
+
+      // When user presses Enter or clicks outside, save changes
+      function saveEdit() {
+        const newText = input.value.trim();
+        if (!newText) {
+          alert('Task cannot be empty!');
+          input.focus();
+          return;
+        }
+
+        // Update task text in the array
+        if (completed) {
+          const task = completedTasks.find(t => t.id === id);
+          if (task) task.text = newText;
+        } else {
+          const task = pendingTasks.find(t => t.id === id);
+          if (task) task.text = newText;
+        }
+
+        // Restore span with new text
+        span.innerText = newText;
+        input.replaceWith(span);
+        editBtn.disabled = false;
+        removeListeners();
+      }
+
+      function onBlur() {
+        saveEdit();
+      }
+
+      function onKeyDown(e) {
+        if (e.key === 'Enter') {
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          // Cancel editing: restore original span text
+          input.replaceWith(span);
+          editBtn.disabled = false;
+          removeListeners();
+        }
+      }
+
+      input.addEventListener('blur', onBlur);
+      input.addEventListener('keydown', onKeyDown);
+
+      function removeListeners() {
+        input.removeEventListener('blur', onBlur);
+        input.removeEventListener('keydown', onKeyDown);
+      }
+    }
+
+    // Initial render
+    renderTasks();
+  </script>
+</body>
+</html>
